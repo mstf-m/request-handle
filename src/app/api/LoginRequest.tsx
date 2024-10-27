@@ -1,18 +1,17 @@
-import RequestHandler from './RequestHandler';
+import { Request } from './Request';
+import { RequestHandler } from './RequestHandler';
 
-export default class LoginRequest {
+export class LoginRequest {
   public static send(mobile: string, onResponse: (data: any) => void) {
+    const requestHandler = RequestHandler.getInstance(); // Get singleton instance
     const requestBody = {
-      message_id: RequestHandler.generateMessageId(),
       token: 'none',
       device_id: 'IOS_2525225',
       version: 1,
-      body: {
-        constructor: 600,
-        mobile,
-      },
+      body: { constructor: 600, mobile },
     };
 
-    RequestHandler.sendRequest(requestBody, onResponse);
+    const request = new Request(requestBody, onResponse);
+    requestHandler.sendRequest(request);
   }
 }

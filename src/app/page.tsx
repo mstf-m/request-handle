@@ -1,4 +1,4 @@
-import Image from "next/image";
+
 import { RequestHandlerProvider } from "./context/RequestHandlerContext";
 import { LoginComponent } from "./components/exampleComponent";
 

@@ -1,14 +1,22 @@
-"use client"
+"use client";
 
 import React, { createContext, useContext } from 'react';
-import RequestHandler from '../api/RequestHandler';
+import { RequestHandler } from '../api/RequestHandler';
 
-const RequestHandlerContext = createContext(RequestHandler);
+const requestHandlerInstance = RequestHandler.getInstance(); // Ensure only one instance
 
-export const useRequestHandler = () => useContext(RequestHandlerContext);
+const RequestHandlerContext = createContext<RequestHandler | null>(null);
+
+export const useRequestHandler = () => {
+  const context = useContext(RequestHandlerContext);
+  if (!context) {
+    throw new Error("useRequestHandler must be used within a RequestHandlerProvider");
+  }
+  return context;
+};
 
 export const RequestHandlerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <RequestHandlerContext.Provider value={RequestHandler}>
+  <RequestHandlerContext.Provider value={requestHandlerInstance}>
     {children}
   </RequestHandlerContext.Provider>
 );
