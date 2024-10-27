@@ -7,15 +7,11 @@ export class RequestHandler {
   private pendingResponses: Request[] = [];
   private pendingAcknowledge: Request[] = [];
 
-  private POLL_INTERVAL = 5000; // 5 seconds
-  private MAX_REQUEST_AGE = 20000; // 20 seconds
-  private ACKNOWLEDGE_INTERVAL = 3000; // 3 seconds
-
-  private acknowledgeTimeout: NodeJS.Timeout | null = null;
+  private POLL_INTERVAL = 5000;
+  private MAX_REQUEST_AGE = 30000;
 
   private constructor() {
     this.startPolling();
-    this.startAcknowledging();
   }
 
   public static getInstance(): RequestHandler {
@@ -27,18 +23,7 @@ export class RequestHandler {
 
   public sendRequest(request: Request) {
     this.pendingRequests.push(request);
-    this.processPendingRequests(); // Call function to process pending requests
-  }
-
-  private async processPendingRequests() {
-    // Process each pending request and move successful ones to pendingResponses
-    for (const request of [...this.pendingRequests]) {
-      try {
-        await this.processRequest(request);
-      } catch (error) {
-        console.error('Failed to process request:', error);
-      }
-    }
+    this.processRequest(request);
   }
 
   private async processRequest(request: Request) {
@@ -71,25 +56,28 @@ export class RequestHandler {
           body: { constructor: 300 },
         }),
       });
-
+  
       if (!response.ok) {
         console.error(`Server returned status ${response.status}`);
         return;
       }
-
+  
       const data = await response.json();
-
+  
       if (!data?.data?.last_response) {
         console.warn("No 'last_response' in data:", data);
-        return;
+        return; // Exit if 'last_response' is undefined
       }
-
-      console.log("last-response", data.data.last_response);
-      this.handleResponses(data.data.last_response);
+  
+      console.log("last-response", data.data.last_response); // Keep original logging
+      this
+      
+      .handleResponses(data.data.last_response);
     } catch (error) {
       console.error('Error polling for responses:', error);
     }
   }
+  
 
   private handleResponses(responses: ResponseBody[]) {
     if (responses) {
@@ -98,27 +86,19 @@ export class RequestHandler {
           (req) => req.message_id === response.message_id
         );
 
+
         if (matchingRequest) {
-          matchingRequest.onResponse(response).then(() => {
-            this.pendingResponses = this.pendingResponses.filter(
-              (req) => req.message_id !== response.message_id
-            );
-            this.pendingAcknowledge.push(matchingRequest);
-            console.log(this.pendingAcknowledge, 'acks');
-          });
+          matchingRequest.onResponse(response);
+          this.pendingResponses = this.pendingResponses.filter(
+            (req) => req.message_id !== response.message_id
+          );
+          this.pendingAcknowledge.push(matchingRequest);
+          console.log(  this.pendingAcknowledge, 'acks');
         }
       });
     }
-  }
 
-  private startAcknowledging() {
-    // Clear and reset the acknowledge interval to 3 seconds
-    if (this.acknowledgeTimeout) clearInterval(this.acknowledgeTimeout);
-
-    this.acknowledgeTimeout = setInterval(
-      () => this.acknowledgeResponses(),
-      this.ACKNOWLEDGE_INTERVAL
-    );
+    this.acknowledgeResponses();
   }
 
   private async acknowledgeResponses() {
@@ -152,15 +132,13 @@ export class RequestHandler {
     this.pendingResponses.push(request);
   }
 
-  public resendExpiredRequests() {
-    const now = Date.now();
-    this.pendingRequests = this.pendingRequests.filter((req) => {
-      if (req.isExpired(this.MAX_REQUEST_AGE)) {
-        this.processRequest(req); // Resend expired request
-        return false;
-      }
-      return true;
-    });
+  public cleanupExpiredRequests() {
+    this.pendingRequests = this.pendingRequests.filter(
+      (req) => !req.isExpired(this.MAX_REQUEST_AGE)
+    );
+    this.pendingResponses = this.pendingResponses.filter(
+      (req) => !req.isExpired(this.MAX_REQUEST_AGE)
+    );
   }
 
   // Generate numeric-only UUID (exposed for other classes like LoginRequest)
