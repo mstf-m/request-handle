@@ -6,6 +6,7 @@ export class LoginRequest {
     const requestHandler = RequestHandler.getInstance(); // Get singleton instance
     const requestBody = {
       token: 'none',
+      
       device_id: 'IOS_2525225',
       version: 1,
       body: { constructor: 600, mobile },

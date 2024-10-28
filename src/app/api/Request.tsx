@@ -18,17 +18,20 @@ export interface RequestBody {
 
 export interface ResponseBody {
   message_id: number;
+  response_id: number;
   response_data: any;
 }
 
 export class Request {
   public message_id: number;
+  public response_id: number | null;
   public createdAt: number;
   public body: RequestBody;
   public onResponse: (data: ResponseBody) => void;
 
   constructor(body: Omit<RequestBody, 'message_id'>, onResponse: (data: ResponseBody) => void) {
     this.message_id = generateNumericUUID();
+    this.response_id = null;
     this.createdAt = Date.now();
     this.body = { ...body, message_id: this.message_id };
     this.onResponse = onResponse;
