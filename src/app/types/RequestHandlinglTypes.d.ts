@@ -1,7 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper function to generate numeric-only UUID
-const generateNumericUUID = () => uuidv4().replace(/\D/g, '').substring(0, 12);
+export const generateNumericUUID = () => {
+  let id = parseInt(uuidv4().replace(/\D/g, '').substring(0, 12), 10);
+  return id % 2 === 0 ? id : id + 1; // Ensure it's even
+};
 
 export interface RequestBody {
   message_id: number;

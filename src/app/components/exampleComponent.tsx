@@ -12,6 +12,11 @@ export const LoginComponent: React.FC = () => {
     setIsClient(true); // Ensures client-only rendering logic
   }, []);
 
+  useEffect(() => {
+    requestHandler.startPolling(); // Start polling on mount
+    return () => requestHandler.stopPolling(); // Stop polling on unmount
+  }, [requestHandler]);
+
   const handleLogin = () => {
     if (isClient) {
       LoginRequest.send("989120515679", (response) => {

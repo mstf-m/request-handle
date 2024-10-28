@@ -2,6 +2,7 @@ import { Request, RequestBody, ResponseBody, generateNumericUUID } from './Reque
 
 export class RequestHandler {
   private static instance: RequestHandler;
+  private serviceWorker: ServiceWorkerContainer | null = null;
 
   private pendingRequests: Request[] = [];
   private pendingResponses: Request[] = [];
@@ -15,7 +16,15 @@ export class RequestHandler {
   private acknowledgeTimeoutId: NodeJS.Timeout | null = null;
 
   private constructor() {
-    this.startPolling();
+    if (navigator.serviceWorker) {
+      this.serviceWorker = navigator.serviceWorker;
+    }
+
+    navigator.serviceWorker?.addEventListener('message', (event) => {
+      if (event.data?.type === 'NEW_RESPONSE') {
+        this.handleResponses(event.data.payload);
+      }
+    });
     setInterval(() => this.resendExpiredRequests(), this.RESEND_INTERVAL);
   }
 
@@ -46,45 +55,16 @@ export class RequestHandler {
     }
   }
 
-  private startPolling() {
-    setInterval(() => this.pollForResponses(), this.POLL_INTERVAL);
+  public startPolling() {
+    this.serviceWorker?.controller?.postMessage({ type: 'START_POLLING' });
   }
 
-  private async pollForResponses() {
-    try {
-      const response = await fetch('https://hijab.liara.run/home', {
-        method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        body: JSON.stringify({
-          message_id: this.generateMessageId(),
-          token: 'none',
-          device_id: 'IOS_2525225',
-          version: 1,
-          body: { constructor: 300 },
-        }),
-      });
-
-      if (!response.ok) {
-        console.error(`Server returned status ${response.status}`);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!data?.data?.last_response) {
-        console.warn("No 'last_response' in data:", data);
-        return; // Exit if 'last_response' is undefined
-      }
-
-      console.log("last-response", data.data.last_response); // Keep original logging
-
-      this.handleResponses(data.data.last_response);
-    } catch (error) {
-      console.error('Error polling for responses:', error);
-    }
+  public stopPolling() {
+    this.serviceWorker?.controller?.postMessage({ type: 'STOP_POLLING' });
   }
 
   private async handleResponses(responses: ResponseBody[]) {
+    console.log('ss');
     if (responses) {
       for (const response of responses) {
         const matchingRequest = this.pendingResponses.find(
@@ -168,3 +148,6 @@ export class RequestHandler {
     return generateNumericUUID();
   }
 }
+
+
+
